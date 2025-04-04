@@ -50,9 +50,15 @@
             margin-top: 20px;
             padding: 10px;
             border-radius: 4px;
-            background-color: #e8f4fd;
-            color: #2980b9;
             text-align: center;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
         }
         .no-data {
             text-align: center;
@@ -80,7 +86,7 @@
         </table>
         
         <div id="no-data" class="no-data">Nenhuma medição disponível</div>
-        <div class="status" id="connection-status">Conectando ao servidor...</div>
+        <div class="status disconnected" id="connection-status">Conectando ao servidor...</div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -91,26 +97,22 @@
             const noDataMessage = document.getElementById('no-data');
             const connectionStatus = document.getElementById('connection-status');
             
-            // Array para armazenar as medições
             const measurements = [];
-            
-            // Função para formatar a data a partir do timestamp Unix
+
+            // Função para formatar a data a partir do timestamp Unix (em segundos)
             function formatDate(unixTime) {
-                const date = new Date(unixTime);
-                return date.toLocaleString('pt-BR');
+                const date = new Date(unixTime * 1000);
+                return date.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
             }
             
             // Função para atualizar a tabela
             function updateTable() {
                 if (measurements.length > 0) {
                     noDataMessage.style.display = 'none';
-                    
-                    // Limpar a tabela atual
                     measurementsList.innerHTML = '';
-                    
-                    // Adicionar cada medição à tabela (em ordem decrescente de tempo)
+
                     measurements.sort((a, b) => b.unixTime - a.unixTime);
-                    
+
                     measurements.forEach(measure => {
                         const row = document.createElement('tr');
                         
@@ -137,25 +139,25 @@
             // Evento de conexão estabelecida
             socket.on('connect', () => {
                 connectionStatus.textContent = 'Conectado ao servidor';
-                connectionStatus.style.backgroundColor = '#d4edda';
-                connectionStatus.style.color = '#155724';
+                connectionStatus.classList.remove('disconnected');
+                connectionStatus.classList.add('connected');
             });
             
             // Evento de desconexão
             socket.on('disconnect', () => {
                 connectionStatus.textContent = 'Desconectado do servidor';
-                connectionStatus.style.backgroundColor = '#f8d7da';
-                connectionStatus.style.color = '#721c24';
+                connectionStatus.classList.remove('connected');
+                connectionStatus.classList.add('disconnected');
             });
-            
-            // Recebimento de novas medições
-            socket.on('message', (data) => {
+
+            // Recebimento de novas medições via WebSocket
+            socket.on('new_measurement', (data) => {
                 measurements.push(data);
                 updateTable();
             });
 
-            // Carregar dados iniciais (se necessário implementar um endpoint para isso)
-            fetch('/api/measurements')
+            // Carregar dados iniciais do banco de dados via API
+            fetch('https:/localhost:3000/api/measures')
                 .then(response => response.json())
                 .then(data => {
                     if (data && data.length) {
