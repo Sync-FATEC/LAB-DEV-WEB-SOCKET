@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,6 +13,7 @@
             background-color: #f5f5f5;
             color: #333;
         }
+
         .container {
             max-width: 900px;
             margin: 0 auto;
@@ -20,32 +22,39 @@
             padding: 20px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
+
         h1 {
             text-align: center;
             color: #2c3e50;
             margin-bottom: 30px;
         }
+
         .measures-list {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
         }
+
         .measures-list th {
             background-color: #3498db;
             color: white;
             padding: 12px;
             text-align: left;
         }
+
         .measures-list td {
             padding: 10px;
             border-bottom: 1px solid #ddd;
         }
+
         .measures-list tr:nth-child(even) {
             background-color: #f9f9f9;
         }
+
         .measures-list tr:hover {
             background-color: #f1f1f1;
         }
+
         .status {
             margin-top: 20px;
             padding: 10px;
@@ -54,6 +63,7 @@
             color: #2980b9;
             text-align: center;
         }
+
         .no-data {
             text-align: center;
             padding: 20px;
@@ -62,10 +72,11 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Lista de Medições</h1>
-        
+
         <table class="measures-list">
             <thead>
                 <tr>
@@ -78,7 +89,7 @@
                 <!-- Dados serão inseridos aqui dinamicamente -->
             </tbody>
         </table>
-        
+
         <div id="no-data" class="no-data">Nenhuma medição disponível</div>
         <div class="status" id="connection-status">Conectando ao servidor...</div>
     </div>
@@ -90,70 +101,102 @@
             const measurementsList = document.getElementById('measurements-body');
             const noDataMessage = document.getElementById('no-data');
             const connectionStatus = document.getElementById('connection-status');
-            
+
             // Array para armazenar as medições
             const measurements = [];
-            
+
             // Função para formatar a data a partir do timestamp Unix
             function formatDate(unixTime) {
                 const date = new Date(unixTime);
                 return date.toLocaleString('pt-BR');
             }
-            
+
             // Função para atualizar a tabela
             function updateTable() {
                 if (measurements.length > 0) {
                     noDataMessage.style.display = 'none';
-                    
+
                     // Limpar a tabela atual
                     measurementsList.innerHTML = '';
-                    
+
                     // Adicionar cada medição à tabela (em ordem decrescente de tempo)
                     measurements.sort((a, b) => b.unixTime - a.unixTime);
-                    
+
                     measurements.forEach(measure => {
                         const row = document.createElement('tr');
-                        
+
                         const timeCell = document.createElement('td');
                         timeCell.textContent = formatDate(measure.unixTime);
-                        
+
                         const tempCell = document.createElement('td');
                         tempCell.textContent = measure.temperature.toFixed(1);
-                        
+
                         const humidityCell = document.createElement('td');
                         humidityCell.textContent = measure.humidity.toFixed(1);
-                        
+
                         row.appendChild(timeCell);
                         row.appendChild(tempCell);
                         row.appendChild(humidityCell);
-                        
+
                         measurementsList.appendChild(row);
                     });
                 } else {
                     noDataMessage.style.display = 'block';
                 }
             }
-            
-            // Evento de conexão estabelecida
-            socket.on('connect', () => {
-                connectionStatus.textContent = 'Conectado ao servidor';
-                connectionStatus.style.backgroundColor = '#d4edda';
-                connectionStatus.style.color = '#155724';
-            });
-            
-            // Evento de desconexão
-            socket.on('disconnect', () => {
-                connectionStatus.textContent = 'Desconectado do servidor';
-                connectionStatus.style.backgroundColor = '#f8d7da';
-                connectionStatus.style.color = '#721c24';
-            });
-            
-            // Recebimento de novas medições
-            socket.on('message', (data) => {
-                measurements.push(data);
-                updateTable();
-            });
 
+            const ws = new WebSocket('ws://192.168.250.87:81');
+
+            ws.onopen = (event) => {
+                console.log("Conexão WebSocket estabelecida!");
+                connectionStatus.textContent = "Conectado ao servidor";
+                connectionStatus.style.backgroundColor = "#d4edda";
+                connectionStatus.style.color = "#155724";
+            };
+
+            ws.onmessage = (event) => {
+                console.log("Dados recebidos do servidor:", event.data);
+
+                try {
+                    const dados = JSON.parse(event.data);
+                    console.log("Temperatura:", dados.temperature);
+                    console.log("Umidade:", dados.humidity);
+                    
+                    // Adicionar a nova medição ao array
+                    const newMeasurement = {
+                        unixTime: Date.now(), // Timestamp atual
+                        temperature: dados.temperature,
+                        humidity: dados.humidity
+                    };
+                    
+                    // Adicionar ao início do array para mostrar os mais recentes primeiro
+                    measurements.unshift(newMeasurement);
+                    
+                    // Limitar o número de medições exibidas (opcional)
+                    if (measurements.length > 100) {
+                        measurements.pop();
+                    }
+                    
+                    // Atualizar a tabela com os novos dados
+                    updateTable();
+                } catch (e) {
+                    console.log("Dados recebidos não são JSON válido");
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error("Erro na conexão WebSocket:", error);
+                connectionStatus.textContent = "Erro na conexão com o servidor";
+                connectionStatus.style.backgroundColor = "#f8d7da";
+                connectionStatus.style.color = "#721c24";
+            };
+
+            ws.onclose = (event) => {
+                console.log("Conexão WebSocket fechada. Código:", event.code, "Motivo:", event.reason);
+                connectionStatus.textContent = "Conexão com o servidor fechada";
+                connectionStatus.style.backgroundColor = "#fff3cd";
+                connectionStatus.style.color = "#856404";
+            };
             // Carregar dados iniciais (se necessário implementar um endpoint para isso)
             fetch('/api/measurements')
                 .then(response => response.json())
@@ -169,4 +212,5 @@
         });
     </script>
 </body>
+
 </html>
