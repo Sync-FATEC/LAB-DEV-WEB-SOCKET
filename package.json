@@ -1,25 +1,35 @@
 {
-  "name": "kkkkkkkkkkkkkkkkkkkkkk",
+  "name": "lab-dev-web-socket",
   "version": "1.0.0",
-  "description": "\"# LAB-DEV-WEB-SOCKET\"",
+  "description": "# LAB-DEV-WEB-SOCKET",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "express": "^5.1.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@types/body-parser": "^1.19.5",
     "@types/express": "^5.0.1",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.2",
     "@types/ws": "^8.18.1",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "vite": "^6.2.5"
   }
 }
