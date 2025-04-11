@@ -5,8 +5,10 @@ import bodyParser from 'body-parser';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import WebSocket from 'ws'; // Importando WebSocket
+import cors from 'cors'; // Importe o módulo cors
 
 const app = express();
+app.use(cors()); // Use o middleware cors
 const port = 3000;
 const httpServer = createServer(app);
 const io = new Server(httpServer);
@@ -41,7 +43,7 @@ async function startServer() {
 
     app.get('/api/measures', async (req, res) => {
         try {
-            const rows = await db.all('SELECT * FROM messages ORDER BY unixTime DESC LIMIT 9999');
+            const rows = await db.all('SELECT * FROM messages ORDER BY unixTime DESC LIMIT 10');
             res.json(rows);
         } catch (err) {
             console.error('Erro ao buscar mensagens:', err);
@@ -50,7 +52,7 @@ async function startServer() {
     });
 
     // Conectando ao WebSocket
-    const ws = new WebSocket('ws://192.168.250.87:81');
+    const ws = new WebSocket('ws://192.168.29.130:81');
 
     ws.onopen = () => {
         console.log("Conexão WebSocket estabelecida!");
@@ -61,6 +63,14 @@ async function startServer() {
         
         try {
             const texto = event.data.toString();
+            if(texto === "LIGADO"){
+                io.emit('stop', "stop");	
+            }
+
+            
+            if(texto === "DESLIGADO"){
+                io.emit('volta', "volta");	
+            }
             texto.split(",")
             console.log(texto);
 
