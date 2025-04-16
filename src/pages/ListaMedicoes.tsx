@@ -16,25 +16,20 @@ const ListaMedicoes: React.FC = () => {
   const [pausado, setPausado] = useState(false);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://192.168.29.130:81");
+    const ws = new WebSocket("ws://192.168.89.130:81");
     ws.onopen = () => {
       console.log("Conexão WebSocket estabelecida!");
     };
     ws.onmessage = async (event) => {
-      console.log(event.data);
       try {
         const texto = event.data.toString();
         if (texto === "LIGOU") {
           window.close();
         }
-        texto.split(",");
-        console.log(texto);
-        const temp = texto[0];
-        const humidity = texto[1];
-        const dados = {
-          temperature: parseFloat(temp),
-          humidity: parseFloat(humidity),
-        };
+        const vars = texto.split(",");
+        const temp = vars[0];
+        const humidity = vars[1];
+
         const unixTime = Math.floor(Date.now() / 1000);
 
         let novaMedida = {
@@ -43,9 +38,11 @@ const ListaMedicoes: React.FC = () => {
           temperature: temp,
           humidity: humidity,
         };
-        setTimeout(() => setMedidas([...medidas, novaMedida]), 1000);
+        
+        updateMedidas(novaMedida)
+
       } catch {
-        console.log("ERROO");
+        console.log("ERRO");
       }
     };
 
@@ -54,6 +51,10 @@ const ListaMedicoes: React.FC = () => {
       .then((data) => setMedidas(data))
       .catch((err) => console.error("Erro ao carregar medidas:", err));
   }, []);
+
+  const updateMedidas = (medida: any) => {
+    setMedidas((prev) => [...prev, medida]);
+  };
 
   const formatarData = (unixTime: number) => {
     const data = new Date(unixTime * 1000);
@@ -79,8 +80,8 @@ const ListaMedicoes: React.FC = () => {
               .map((m) => (
                 <tr key={m.id}>
                   <td>{formatarData(m.unixTime)}</td>
-                  <td>{m.temperature.toFixed(1)}</td>
-                  <td>{m.humidity.toFixed(1)}</td>
+                  <td>{m.temperature}</td>
+                  <td>{m.humidity}</td>
                 </tr>
               ))
           ) : (
@@ -93,9 +94,7 @@ const ListaMedicoes: React.FC = () => {
         </tbody>
       </table>
 
-      <div className={`status ${conectado ? "connected" : "disconnected"}`}>
-        {conectado ? "Conectado ao servidor" : "Desconectado do servidor"}
-      </div>
+      
     </div>
   );
 };

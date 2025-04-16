@@ -6,6 +6,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import WebSocket from 'ws'; // Importando WebSocket
 import cors from 'cors'; // Importe o módulo cors
+import { log } from 'console';
 
 const app = express();
 app.use(cors()); // Use o middleware cors
@@ -52,50 +53,59 @@ async function startServer() {
     });
 
     // Conectando ao WebSocket
-    const ws = new WebSocket('ws://192.168.29.130:81');
+    const ws = new WebSocket('ws://192.168.89.130:81');
 
     ws.onopen = () => {
         console.log("Conexão WebSocket estabelecida!");
     };
 
-    ws.onmessage = async (event) => {
-        console.log(event.data);
+ws.onmessage = async (event) => {
+    const texto = event.data.toString().trim();
+    console.log("Recebido:", texto);
+
+    // Trata mensagens de controle
+    if (texto === "LIGADO") {
+        io.emit('stop', "stop");
+        return; // Impede processamento abaixo
+    }
+
+    if (texto === "DESLIGADO") {
+        io.emit('volta', "volta");
+        return; // Impede processamento abaixo
+    }
+
+    try {
+        const vars = texto.split(",");
         
-        try {
-            const texto = event.data.toString();
-            if(texto === "LIGADO"){
-                io.emit('stop', "stop");	
-            }
-
-            
-            if(texto === "DESLIGADO"){
-                io.emit('volta', "volta");	
-            }
-            texto.split(",")
-            console.log(texto);
-
-            const temp = texto[0]
-            const humidity = texto[1]
-            const dados: Medida = {
-                temperature: parseFloat(temp),
-                humidity: parseFloat(humidity),
-            };
-
-            // Gerando timestamp no momento da inserção
-            const unixTime = Math.floor(Date.now() / 1000);
-
-            // Inserindo os dados no SQLite
-            await db.run(
-                `INSERT INTO messages (unixTime, temperature, humidity) VALUES (?, ?, ?)`,
-                [unixTime, dados.temperature, dados.humidity]
-            );
-
-            console.log("Dados inseridos no banco de dados:", { unixTime, ...dados });
-            
-        } catch (e) {
-            console.log("Dados recebidos não são JSON válido");
+        // Verificação se temos exatamente duas partes
+        if (vars.length !== 2) {
+            console.warn("Formato inesperado:", texto);
+            return;
         }
-    };
+
+        const temp = parseFloat(vars[0]);
+        const humidity = parseFloat(vars[1]);
+
+        // Verifica se os valores são válidos
+        if (isNaN(temp) || isNaN(humidity)) {
+            console.warn("Valores inválidos:", vars);
+            return;
+        }
+
+        const dados: Medida = { temperature: temp, humidity: humidity };
+        const unixTime = Math.floor(Date.now() / 1000);
+
+        await db.run(
+            `INSERT INTO messages (unixTime, temperature, humidity) VALUES (?, ?, ?)`,
+            [unixTime, dados.temperature, dados.humidity]
+        );
+
+        console.log("Dados inseridos no banco de dados:", { unixTime, ...dados });
+    } catch (e) {
+        console.error("Erro ao processar mensagem:", e);
+    }
+};
+
 
     ws.onerror = (error) => {
         console.error("Erro na conexão WebSocket:", error);
